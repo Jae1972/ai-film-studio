@@ -1,0 +1,6 @@
+{
+  "name": "AI FILM STUDIO",
+  "description": "Studio produksi film pendek berbasis AI dengan antarmuka dark mode profesional, generator cerita, naskah, karakter, konsistensi visual, adegan, storyboard, suara, dan arsitektur Kotlin Jetpack Compose.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
