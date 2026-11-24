@@ -139,7 +139,7 @@ class GeminiStudioService(
 
                 val scheme = "https"
                 val host = "generativelanguage.googleapis.com"
-                val path = "/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+                val path = "/v1beta/models/gemini-3.8-flash:generateContent?key=$apiKey"
                 val request = Request.Builder()
                     .url("$scheme://$host$path")
                     .post(requestBodyJson.toRequestBody("application/json".toMediaType()))
