@@ -23,7 +23,9 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val geminiService = GeminiStudioService(baseBackendUrl = "https://YOUR_CLOUD_RUN_BACKEND_URL")
+        val geminiService = GeminiStudioService(
+            apiKey = BuildConfig.GEMINI_API_KEY
+        )
 
         setContent {
             AiFilmStudioTheme {
