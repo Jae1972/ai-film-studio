@@ -18,6 +18,7 @@ android {
         versionName = "1.0.0"
 
         buildConfigField("String", "GEMINI_MODEL", "\"gemini-4-hydrogen\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${System.getenv("GEMINI_API_KEY") ?: ""}\"")
     }
 
     compileOptions {
