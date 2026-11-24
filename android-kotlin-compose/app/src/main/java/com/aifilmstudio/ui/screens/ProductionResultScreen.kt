@@ -69,7 +69,6 @@ fun ProductionResultScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Header Ringkasan Proyek Aktif
         Surface(
             color = NavySurface,
             shape = RoundedCornerShape(12.dp),
@@ -87,7 +86,7 @@ fun ProductionResultScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${project.input.genre} •${project.input.episodeCount} Episode (${project.input.episodeDurationMinutes} mnt) • Rasio ${project.input.aspectRatio}",
+                    text = "${project.input.genre} • ${project.input.episodeCount} Episode (${project.input.episodeDurationMinutes} mnt) • Rasio ${project.input.aspectRatio}",
                     color = TextSecondary,
                     fontSize = 12.sp
                 )
@@ -194,7 +193,7 @@ private fun ScriptTabContent(project: FilmProject) {
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "Episode ${ep.episodeNumber}:${ep.title}",
+                                text = "Episode ${ep.episodeNumber}: ${ep.title}",
                                 color = CyanAccent,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
@@ -235,7 +234,7 @@ private fun ScriptTabContent(project: FilmProject) {
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "ADEGAN ${block.sceneNumber} —${block.slugline}",
+                            text = "ADEGAN ${block.sceneNumber} — ${block.slugline}",
                             color = CyanAccent,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -294,7 +293,6 @@ private fun CharacterTabContent(
         pendingCharacterTarget = null
     }
 
-    // 1. Profil Karakter + Upload Foto Referensi
     StudioCard(title = "Daftar Karakter (${project.characters.size} Tokoh)") {
         if (project.characters.isEmpty()) {
             Text("Data karakter belum tersedia.", color = TextSecondary, fontSize = 13.sp)
@@ -327,7 +325,7 @@ private fun CharacterTabContent(
                                 border = BorderStroke(1.dp, CyanAccent)
                             ) {
                                 Text(
-                                    text = "${char.role} •${char.age}",
+                                    text = "${char.role} • ${char.age}",
                                     color = TextPrimary,
                                     fontSize = 11.sp,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -335,7 +333,6 @@ private fun CharacterTabContent(
                             }
                         }
 
-                        // Area Foto Referensi Karakter
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -432,7 +429,6 @@ private fun CharacterTabContent(
         }
     }
 
-    // 2. Panduan Konsistensi Identitas
     if (project.consistency.isNotEmpty()) {
         StudioCard(title = "Jangkar Konsistensi Visual (Identity Lock)") {
             project.consistency.forEach { guide ->
@@ -484,7 +480,7 @@ private fun CharacterTabContent(
                         DetailRow("Prompt Anchor", guide.promptAnchor)
 
                         val exportPrompt = if (guide.referenceImageUri != null) {
-                            "[REFERENCE IMAGE LOCKED: ${guide.characterName} | Seed: ${guide.identitySeed}]${guide.promptAnchor}"
+                            "[REFERENCE IMAGE LOCKED: ${guide.characterName} | Seed: ${guide.identitySeed}] ${guide.promptAnchor}"
                         } else {
                             guide.promptAnchor
                         }
@@ -533,4 +529,204 @@ private fun CharacterPhotoThumbnail(
             .border(1.dp, if (bitmap != null) CyanAccent else CyanBorder, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-        if (
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Foto Referensi Karakter",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductionTabContent(
+    project: FilmProject,
+    onCopyPrompt: (String) -> Unit
+) {
+    StudioCard(title = "Breakdown Adegan (${project.scenes.size} Scene)") {
+        if (project.scenes.isEmpty()) {
+            Text("Daftar adegan belum tersedia.", color = TextSecondary, fontSize = 13.sp)
+        } else {
+            project.scenes.forEach { scene ->
+                Surface(
+                    color = NavyInputBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, CyanBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Scene ${scene.sceneNumber} (Ep. ${scene.episodeNumber}) — ${scene.heading}",
+                            color = CyanAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DetailRow("Lokasi", scene.location)
+                        DetailRow("Kamera & Cahaya", "${scene.cameraMovement} • ${scene.lighting}")
+                        DetailRow("Aksi", scene.actionSummary)
+                        if (scene.charactersInvolved.isNotEmpty()) {
+                            DetailRow("Tokoh", scene.charactersInvolved.joinToString(", "))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    StudioCard(title = "Storyboard & Visual Prompt (${project.storyboard.size} Frame)") {
+        if (project.storyboard.isEmpty()) {
+            Text("Storyboard belum tersedia.", color = TextSecondary, fontSize = 13.sp)
+        } else {
+            project.storyboard.forEach { frame ->
+                Surface(
+                    color = NavyInputBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, CyanBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Frame #${frame.frameNumber} (Scene ${frame.sceneNumber})",
+                                color = CyanAccent,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${frame.durationSeconds} dtk",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        DetailRow("Sinematografi", "${frame.shotType} • ${frame.cameraAngle} • ${frame.lensMm}")
+                        if (frame.location.isNotBlank()) {
+                            DetailRow("Lokasi", frame.location)
+                        }
+                        DetailRow("Visual", frame.visualDescription)
+                        if (frame.dialogue.isNotBlank()) {
+                            DetailRow("Dialog", "\"${frame.dialogue}\"")
+                        }
+                        DetailRow("AI Prompt", frame.visualPrompt)
+
+                        OutlinedButton(
+                            onClick = { onCopyPrompt(frame.visualPrompt) },
+                            border = BorderStroke(1.dp, CyanAccent),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanAccent),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Salin Visual Prompt Frame #${frame.frameNumber}", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioCard(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        color = NavySurface,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, CyanBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            content()
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Text(
+        text = "$label: $value",
+        color = TextPrimary,
+        fontSize = 12.sp,
+        lineHeight = 17.sp
+    )
+}
+
+@Composable
+private fun EmptyProductionView(onBackToForm: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            color = NavySurface,
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, CyanBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MovieCreation,
+                    contentDescription = null,
+                    tint = CyanAccent,
+                    modifier = Modifier.size(36.dp)
+                )
+                Text(
+                    text = "Belum Ada Hasil Produksi",
+                    color = TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Lengkapi pengaturan proyek di tab 1. Input lalu tekan Generate Produksi Drama.",
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
+                Button(
+                    onClick = onBackToForm,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CyanAccent,
+                        contentColor = NavyInputBg
+                    )
+                ) {
+                    Text("Kembali ke 1. Input", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
