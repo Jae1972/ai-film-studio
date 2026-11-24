@@ -20,6 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aifilmstudio.data.remote.GeminiStudioService
+import com.aifilmstudio.model.CharacterDraft
+import com.aifilmstudio.model.ConsistencyGuide
 import com.aifilmstudio.model.FilmProductionInput
 import com.aifilmstudio.model.FilmProject
 import com.aifilmstudio.model.StudioDestination
@@ -27,6 +29,7 @@ import com.aifilmstudio.ui.screens.ProductionFormScreen
 import com.aifilmstudio.ui.screens.ProductionResultScreen
 import com.aifilmstudio.ui.theme.AiFilmStudioTheme
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -171,16 +174,98 @@ fun AiFilmStudioApp(geminiService: GeminiStudioService) {
             when (currentRoute) {
                 StudioDestination.PRODUCTION_FORM -> ProductionFormScreen(
                     input = formInput,
+                    characters = activeProject?.characters.orEmpty(),
                     isGenerating = isGenerating,
                     errorMessage = errorMessage,
                     onInputChange = { formInput = it },
+                    onAddCharacter = { newChar ->
+                        val base = activeProject ?: FilmProject(
+                            id = UUID.randomUUID().toString(),
+                            updatedAtEpochMs = System.currentTimeMillis(),
+                            input = formInput
+                        )
+                        val newLock = ConsistencyGuide(
+                            characterName = newChar.name,
+                            identitySeed = "CHAR-${(base.characters.size + 1).toString().padStart(2, '0')}",
+                            facialFeatures = newChar.facialDescription.ifBlank { newChar.appearance },
+                            signatureOutfit = newChar.costume,
+                            promptAnchor = listOf(newChar.name, newChar.appearance, newChar.costume)
+                                .filter { it.isNotBlank() }
+                                .joinToString(", "),
+                            locked = true,
+                            referenceImageUri = newChar.referenceImageUri
+                        )
+                        activeProject = base.copy(
+                            characters = base.characters + newChar,
+                            consistency = base.consistency + newLock,
+                            updatedAtEpochMs = System.currentTimeMillis()
+                        )
+                    },
+                    onDeleteCharacter = { charId ->
+                        val base = activeProject ?: return@ProductionFormScreen
+                        val target = base.characters.find { it.id == charId }
+                        activeProject = base.copy(
+                            characters = base.characters.filterNot { it.id == charId },
+                            consistency = base.consistency.filterNot {
+                                target != null && it.characterName.equals(target.name, ignoreCase = true)
+                            },
+                            updatedAtEpochMs = System.currentTimeMillis()
+                        )
+                    },
+                    onUpdateCharacterPhoto = { charId, newUri ->
+                        val base = activeProject ?: return@ProductionFormScreen
+                        val target = base.characters.find { it.id == charId }
+                        activeProject = base.copy(
+                            characters = base.characters.map {
+                                if (it.id == charId) it.copy(referenceImageUri = newUri) else it
+                            },
+                            consistency = base.consistency.map {
+                                if (target != null && it.characterName.equals(target.name, ignoreCase = true)) {
+                                    it.copy(referenceImageUri = newUri)
+                                } else it
+                            },
+                            updatedAtEpochMs = System.currentTimeMillis()
+                        )
+                    },
                     onGenerateFilm = {
                         scope.launch {
                             isGenerating = true
                             errorMessage = null
-                            geminiService.generateFullFilm(formInput)
+
+                            val manualDrafts = activeProject?.characters?.map {
+                                CharacterDraft(
+                                    id = it.id,
+                                    name = it.name,
+                                    role = it.role,
+                                    trait = listOf(it.appearance, it.costume)
+                                        .filter { s -> s.isNotBlank() }
+                                        .joinToString(" | ")
+                                )
+                            }.orEmpty()
+
+                            val finalInput = formInput.copy(
+                                characters = manualDrafts.ifEmpty { formInput.characters }
+                            )
+
+                            val existingPhotosByName = activeProject?.characters
+                                ?.filter { it.referenceImageUri != null }
+                                ?.associate { it.name.lowercase() to it.referenceImageUri }
+                                .orEmpty()
+
+                            geminiService.generateFullFilm(finalInput)
                                 .onSuccess { generated ->
-                                    activeProject = generated
+                                    val mergedCharacters = generated.characters.map { ch ->
+                                        val savedUri = existingPhotosByName[ch.name.lowercase()]
+                                        if (savedUri != null) ch.copy(referenceImageUri = savedUri) else ch
+                                    }
+                                    val mergedConsistency = generated.consistency.map { cg ->
+                                        val savedUri = existingPhotosByName[cg.characterName.lowercase()]
+                                        if (savedUri != null) cg.copy(referenceImageUri = savedUri) else cg
+                                    }
+                                    activeProject = generated.copy(
+                                        characters = mergedCharacters,
+                                        consistency = mergedConsistency
+                                    )
                                     currentRoute = StudioDestination.SCRIPT_VIEW
                                 }
                                 .onFailure { err ->
@@ -192,6 +277,7 @@ fun AiFilmStudioApp(geminiService: GeminiStudioService) {
                 )
                 else -> ProductionResultScreen(
                     project = activeProject,
+                    currentInput = formInput,
                     activeTab = currentRoute,
                     onProjectUpdate = { updated -> activeProject = updated },
                     onBackToForm = { currentRoute = StudioDestination.PRODUCTION_FORM }
