@@ -73,7 +73,6 @@ fun AiFilmStudioApp(geminiService: GeminiStudioService) {
                     .background(deepNavyBg)
                     .statusBarsPadding()
             ) {
-                // BANNER HEADER: OMWAR DRAMA STUDIO
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,7 +126,6 @@ fun AiFilmStudioApp(geminiService: GeminiStudioService) {
                     }
                 }
 
-                // 4 TAB NAVIGASI: 1. Input | 2. Naskah | 3. Karakter | 4. Produksi
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -192,42 +190,12 @@ fun AiFilmStudioApp(geminiService: GeminiStudioService) {
                         }
                     }
                 )
-                StudioDestination.SCRIPT_VIEW -> {
-                    val scriptOnlyProject = activeProject?.copy(
-                        characters = emptyList(),
-                        consistency = emptyList(),
-                        scenes = emptyList(),
-                        storyboard = emptyList()
-                    )
-                    ProductionResultScreen(
-                        project = scriptOnlyProject,
-                        onBackToForm = { currentRoute = StudioDestination.PRODUCTION_FORM }
-                    )
-                }
-                StudioDestination.CHARACTER_VIEW -> {
-                    val characterOnlyProject = activeProject?.copy(
-                        story = null,
-                        scenes = emptyList(),
-                        script = emptyList(),
-                        storyboard = emptyList()
-                    )
-                    ProductionResultScreen(
-                        project = characterOnlyProject,
-                        onBackToForm = { currentRoute = StudioDestination.PRODUCTION_FORM }
-                    )
-                }
-                else -> {
-                    val productionOnlyProject = activeProject?.copy(
-                        story = null,
-                        characters = emptyList(),
-                        consistency = emptyList(),
-                        script = emptyList()
-                    )
-                    ProductionResultScreen(
-                        project = productionOnlyProject,
-                        onBackToForm = { currentRoute = StudioDestination.PRODUCTION_FORM }
-                    )
-                }
+                else -> ProductionResultScreen(
+                    project = activeProject,
+                    activeTab = currentRoute,
+                    onProjectUpdate = { updated -> activeProject = updated },
+                    onBackToForm = { currentRoute = StudioDestination.PRODUCTION_FORM }
+                )
             }
         }
     }
