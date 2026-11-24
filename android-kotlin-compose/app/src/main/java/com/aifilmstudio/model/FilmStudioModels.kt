@@ -3,8 +3,10 @@ package com.aifilmstudio.model
 import kotlinx.serialization.Serializable
 
 enum class StudioDestination(val route: String, val label: String) {
-    PRODUCTION_FORM("production_form", "Produksi Film"),
-    PRODUCTION_RESULT("production_result", "Hasil Produksi"),
+    PRODUCTION_FORM("production_form", "1. Input"),
+    SCRIPT_VIEW("script_view", "2. Naskah"),
+    CHARACTER_VIEW("character_view", "3. Karakter"),
+    PRODUCTION_RESULT("production_result", "4. Produksi"),
     STORY_GENERATOR("story", "Story Generator"),
     SCRIPT_WRITER("script", "Script Writer"),
     CHARACTER_GENERATOR("characters", "Character Generator"),
@@ -28,14 +30,23 @@ data class CharacterDraft(
 @Serializable
 data class FilmProductionInput(
     val title: String = "",
+    val storyCategory: String = "Drama Keluarga",
+    val customCategory: String = "",
     val premise: String = "",
     val genre: String = "Drama",
     val characters: List<CharacterDraft> = emptyList(),
     val episodeCount: Int = 1,
-    val sceneCount: Int = 4,
-    val dialogueLanguage: String = "Bahasa Indonesia",
-    val videoDuration: String = "60 detik",
-    val visualStyle: String = "Sinematik Gelap"
+    val episodeDurationMinutes: Int = 3,
+    val aspectRatio: String = "16:9",
+    val customAspectRatio: String = "",
+    val sceneCount: Int = 5,
+    val dialogueLanguage: String = "Indonesia",
+    val videoDuration: String = "3 menit",
+    val visualStyle: String = "Realistic Cinematic",
+    val sponsorBrandName: String = "",
+    val sponsorBenefit: String = "",
+    val sponsorProductImageUris: List<String> = emptyList(),
+    val useSponsorAsDefaultOutfit: Boolean = false
 )
 
 @Serializable
@@ -51,7 +62,7 @@ data class StoryResult(
     val logline: String,
     val synopsis: String,
     val themes: List<String>,
-    val episodeOutlines: List<EpisodeOutline>
+    val episodeOutlines: List<EpisodeOutline> = emptyList()
 )
 
 @Serializable
@@ -83,20 +94,20 @@ data class ConsistencyGuide(
 @Serializable
 data class GeneratedScene(
     val sceneNumber: Int,
-    val episodeNumber: Int,
-    val heading: String,
-    val location: String,
-    val lighting: String,
-    val cameraMovement: String,
-    val actionSummary: String,
+    val episodeNumber: Int = 1,
+    val heading: String = "",
+    val location: String = "",
+    val lighting: String = "",
+    val cameraMovement: String = "",
+    val actionSummary: String = "",
     val charactersInvolved: List<String> = emptyList(),
-    val estimatedSeconds: Int
+    val estimatedSeconds: Int = 45
 )
 
 @Serializable
 data class ScriptDialogue(
     val character: String,
-    val parenthetical: String,
+    val parenthetical: String = "",
     val line: String
 )
 
@@ -105,7 +116,7 @@ data class ScriptBlock(
     val sceneNumber: Int,
     val slugline: String,
     val action: String,
-    val dialogues: List<ScriptDialogue>
+    val dialogues: List<ScriptDialogue> = emptyList()
 )
 
 @Serializable
@@ -116,19 +127,19 @@ data class StoryboardFrame(
     val characters: List<String> = emptyList(),
     val visualDescription: String = "",
     val dialogue: String = "",
-    val shotType: String,
-    val cameraAngle: String,
-    val lensMm: String,
-    val compositionNotes: String,
-    val visualPrompt: String,
-    val durationSeconds: Int
+    val shotType: String = "Medium Shot",
+    val cameraAngle: String = "Eye Level",
+    val lensMm: String = "35mm anamorphic",
+    val compositionNotes: String = "",
+    val visualPrompt: String = "",
+    val durationSeconds: Int = 8
 )
 
 @Serializable
 data class FilmProject(
     val id: String,
     val updatedAtEpochMs: Long,
-    val input: FilmProductionInput,
+    val input: FilmProductionInput = FilmProductionInput(),
     val story: StoryResult? = null,
     val characters: List<GeneratedCharacter> = emptyList(),
     val consistency: List<ConsistencyGuide> = emptyList(),
