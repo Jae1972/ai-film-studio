@@ -10,11 +10,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
-/**
- * Layanan Gemini API untuk AI FILM STUDIO (Android Native).
- * Gunakan backend proxy (/api/studio/*) atau Google Generative AI SDK dengan key yang aman.
- * Tidak pernah mengembalikan hasil AI palsu saat API gagal atau belum dikonfigurasi.
- */
 class GeminiStudioService(
     private val baseBackendUrl: String
 ) {
