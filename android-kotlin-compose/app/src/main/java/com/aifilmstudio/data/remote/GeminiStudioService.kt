@@ -137,9 +137,9 @@ class GeminiStudioService(
                     })
                 }.toString()
 
-                val url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey)"
+                val baseEndpoint = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent)"
                 val request = Request.Builder()
-                    .url(url)
+                    .url("$baseEndpoint?key=$apiKey")
                     .post(requestBodyJson.toRequestBody("application/json".toMediaType()))
                     .build()
 
