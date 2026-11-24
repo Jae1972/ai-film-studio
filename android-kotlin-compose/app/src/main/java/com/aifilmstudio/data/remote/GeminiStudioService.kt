@@ -2,6 +2,7 @@ package com.aifilmstudio.data.remote
 
 import com.aifilmstudio.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -31,25 +32,58 @@ class GeminiStudioService(
                     error("API Key Gemini kosong. Pastikan GEMINI_API_KEY sudah terpasang di GitHub Secrets.")
                 }
 
+                val effectiveCategory = if (input.storyCategory == "Custom Kategori" && input.customCategory.isNotBlank()) {
+                    input.customCategory
+                } else {
+                    input.storyCategory
+                }
+
+                val effectiveRatio = if (input.aspectRatio == "Custom" && input.customAspectRatio.isNotBlank()) {
+                    input.customAspectRatio
+                } else {
+                    input.aspectRatio
+                }
+
+                val sponsorInstruction = if (input.sponsorBrandName.isNotBlank()) {
+                    """
+                    INSTRUKSI SPONSOR / PRODUCT PLACEMENT WAJIB:
+                    - Nama Produk / Merek: ${input.sponsorBrandName}
+                    - Manfaat / Kegunaan: ${input.sponsorBenefit.ifBlank { "Produk unggulan" }}
+                    - Jumlah Foto Referensi Produk: ${input.sponsorProductImageUris.size} foto dilampirkan
+                    - Sisipkan produk "${input.sponsorBrandName}" secara natural dan halus maksimal pada 1-2 adegan per episode (jangan kaku).
+                    ${if (input.useSponsorAsDefaultOutfit) "- KHUSUS SPONSOR FASHION: Jadikan produk '${input.sponsorBrandName}' sebagai outfit/busana utama default yang dipakai karakter protagonis di setiap adegan dan cantumkan di bagian 'costume', 'signatureOutfit', serta 'visualPrompt'!" else ""}
+                    """.trimIndent()
+                } else {
+                    "Tidak ada sponsor khusus."
+                }
+
                 val inputJsonString = json.encodeToString(FilmProductionInput.serializer(), input)
 
                 val prompt = """
-                    Anda adalah sutradara film profesional, showrunner, dan penulis skenario sinematik.
-                    Buat paket pra-produksi film lengkap dalam format JSON murni (tanpa markdown ```json) berdasarkan data input berikut:
-                    $inputJsonString
+                    Anda adalah sutradara film profesional, showrunner, dan penulis skenario utama di OMWAR DRAMA STUDIO.
+                    Buat paket pra-produksi drama/film lengkap dalam format JSON murni (tanpa blok markdown ```json) berdasarkan konfigurasi proyek berikut:
+                    - Kategori Cerita: $effectiveCategory
+                    - Rasio Layar Target: $effectiveRatio
+                    - Durasi Per Episode: ${input.episodeDurationMinutes} menit
+                    - Detail Input Lengkap: $inputJsonString
 
-                    Kembalikan objek JSON yang mengikuti struktur persis ini:
+                    $sponsorInstruction
+
+                    Kembalikan objek JSON yang mengikuti struktur field persis seperti ini:
                     {
                       "id": "${UUID.randomUUID()}",
                       "updatedAtEpochMs": ${System.currentTimeMillis()},
                       "story": {
                         "logline": "1-2 kalimat logline dramatis",
-                        "synopsis": "Sinopsis lengkap 3 babak",
+                        "synopsis": "Sinopsis lengkap dan menyentuh emosi",
                         "themes": ["tema 1", "tema 2"],
-                        "acts": [
-                          { "actNumber": 1, "title": "Babak I", "summary": "...", "turningPoint": "..." },
-                          { "actNumber": 2, "title": "Babak II", "summary": "...", "turningPoint": "..." },
-                          { "actNumber": 3, "title": "Babak III", "summary": "...", "turningPoint": "..." }
+                        "episodeOutlines": [
+                          {
+                            "episodeNumber": 1,
+                            "title": "Judul Episode 1",
+                            "summary": "Ringkasan alur episode",
+                            "cliffhanger": "Ketegangan penutup episode"
+                          }
                         ]
                       },
                       "characters": [
@@ -58,45 +92,46 @@ class GeminiStudioService(
                           "name": "Nama Karakter",
                           "role": "Protagonis / Antagonis / Pendukung",
                           "age": "Usia",
-                          "appearance": "Ciri fisik & wajah detail",
-                          "facialDescription": "Detail ekspresi & struktur wajah konsisten",
-                          "wardrobeProfile": "Kostum & atribut khas periode/latar",
+                          "appearance": "Postur dan ciri fisik detail",
+                          "facialDescription": "Struktur wajah, mata, dan ekspresi khas",
+                          "hairDescription": "Gaya rambut / penutup kepala",
                           "personality": "Sifat utama",
-                          "motivation": "Tujuan utama",
-                          "voiceStyle": "Gaya bicara",
-                          "referencePrompt": "Prompt detail karakter untuk AI visual"
+                          "costume": "Deskripsi busana lengkap (termasuk outfit sponsor jika aktif)",
+                          "voiceTone": "Gaya dan intonasi bicara",
+                          "referenceImageUri": null
                         }
                       ],
-                      "visualAnchors": [
+                      "consistency": [
                         {
-                          "characterId": "char_1",
                           "characterName": "Nama Karakter",
-                          "faceConsistency": "Jangkar konsistensi wajah",
-                          "wardrobeAnchor": "Jangkar konsistensi busana",
-                          "propAnchor": "Senjata/properti khas",
-                          "lightingStyle": "Gaya pencahayaan sinematik",
-                          "consistencyNotes": "Catatan konsistensi antar adegan"
+                          "identitySeed": "SEED-CHAR-01",
+                          "facialFeatures": "Jangkar konsistensi wajah",
+                          "signatureOutfit": "Jangkar konsistensi busana utama",
+                          "promptAnchor": "Prompt lengkap karakter untuk konsistensi AI visual",
+                          "locked": true,
+                          "referenceImageUri": null
                         }
                       ],
                       "scenes": [
                         {
                           "sceneNumber": 1,
-                          "actNumber": 1,
-                          "setting": "INT/EXT. LOKASI",
-                          "timeOfDay": "PAGI / SIANG / SENJA / MALAM",
-                          "summary": "Ringkasan kejadian adegan",
-                          "emotionalBeat": "Nuansa emosi adegan",
-                          "charactersPresent": ["Nama Karakter"],
-                          "durationSeconds": 45
+                          "episodeNumber": 1,
+                          "heading": "EXT/INT. LOKASI - WAKTU",
+                          "location": "Nama lokasi detail",
+                          "lighting": "Pencahayaan sinematik",
+                          "cameraMovement": "Static / Dolly In / Tracking",
+                          "actionSummary": "Ringkasan kejadian adegan",
+                          "charactersInvolved": ["Nama Karakter"],
+                          "estimatedSeconds": 45
                         }
                       ],
                       "script": [
                         {
                           "sceneNumber": 1,
-                          "slugline": "EXT. LOKASI - WAKTU",
+                          "slugline": "EXT/INT. LOKASI - WAKTU",
                           "action": "Deskripsi aksi sinematik mendetail",
                           "dialogues": [
-                            { "character": "NAMA KARAKTER", "parenthetical": "(nada bicara)", "line": "Dialog karakter" }
+                            { "character": "NAMA KARAKTER", "parenthetical": "(nada bicara)", "line": "Dialog karakter dalam bahasa ${input.dialogueLanguage}" }
                           ]
                         }
                       ],
@@ -104,22 +139,21 @@ class GeminiStudioService(
                         {
                           "frameNumber": 1,
                           "sceneNumber": 1,
-                          "shotTitle": "Judul Shot",
+                          "location": "Lokasi frame",
                           "characters": ["Nama Karakter"],
-                          "visualDescription": "Komposisi visual frame",
+                          "visualDescription": "Komposisi visual frame rasio $effectiveRatio",
                           "dialogue": "Cuplikan dialog",
                           "shotType": "Wide Shot / Medium Shot / Close-Up",
                           "cameraAngle": "Eye Level / Low Angle / High Angle",
-                          "cameraMovement": "Static / Dolly In / Tracking",
-                          "lensSpec": "35mm anamorphic / 50mm / 85mm",
-                          "lighting": "Pencahayaan adegan",
-                          "visualPrompt": "Prompt sinematik lengkap untuk generasi gambar/video",
+                          "lensMm": "35mm anamorphic / 50mm / 85mm",
+                          "compositionNotes": "Catatan framing dan pencahayaan",
+                          "visualPrompt": "Prompt sinematik detail rasio $effectiveRatio gaya${input.visualStyle}",
                           "durationSeconds": 8
                         }
                       ]
                     }
 
-                    Buat minimal 5 adegan utuh di "scenes" dan "script", serta minimal 6 frame detail di "storyboard" yang saling terhubung secara konsisten.
+                    Buat minimal 5 adegan utuh di "scenes" dan "script", serta minimal 6 frame detail di "storyboard" yang saling terhubung.
                 """.trimIndent()
 
                 val requestBodyJson = buildJsonObject {
@@ -145,29 +179,40 @@ class GeminiStudioService(
                     .post(requestBodyJson.toRequestBody("application/json".toMediaType()))
                     .build()
 
-                client.newCall(request).execute().use { response ->
-                    val bodyText = response.body?.string().orEmpty()
-                    if (!response.isSuccessful) {
-                        error("Gemini API Error (${response.code}):$bodyText")
+                var lastError: String? = null
+                var responseBody: String? = null
+
+                for (attempt in 1..3) {
+                    client.newCall(request).execute().use { response ->
+                        val bodyText = response.body?.string().orEmpty()
+                        if (response.isSuccessful) {
+                            responseBody = bodyText
+                        } else {
+                            lastError = "Gemini API Error (${response.code}):$bodyText"
+                        }
                     }
-                    val root = json.parseToJsonElement(bodyText).jsonObject
-                    val contentText = root["candidates"]?.jsonArray
-                        ?.firstOrNull()?.jsonObject
-                        ?.get("content")?.jsonObject
-                        ?.get("parts")?.jsonArray
-                        ?.firstOrNull()?.jsonObject
-                        ?.get("text")?.jsonPrimitive?.content
-                        ?: error("Respons kosong dari Gemini API.")
-
-                    val cleanJson = contentText
-                        .removePrefix("```json")
-                        .removePrefix("```")
-                        .removeSuffix("```")
-                        .trim()
-
-                    val parsed = json.decodeFromString<FilmProject>(cleanJson)
-                    parsed.copy(input = input, updatedAtEpochMs = System.currentTimeMillis())
+                    if (responseBody != null) break
+                    if (attempt < 3) delay(2500L * attempt)
                 }
+
+                val finalBody = responseBody ?: error(lastError ?: "Gagal terhubung ke Gemini API.")
+                val root = json.parseToJsonElement(finalBody).jsonObject
+                val contentText = root["candidates"]?.jsonArray
+                    ?.firstOrNull()?.jsonObject
+                    ?.get("content")?.jsonObject
+                    ?.get("parts")?.jsonArray
+                    ?.firstOrNull()?.jsonObject
+                    ?.get("text")?.jsonPrimitive?.content
+                    ?: error("Respons kosong dari Gemini API.")
+
+                val cleanJson = contentText
+                    .removePrefix("```json")
+                    .removePrefix("```")
+                    .removeSuffix("```")
+                    .trim()
+
+                val parsed = json.decodeFromString<FilmProject>(cleanJson)
+                parsed.copy(input = input, updatedAtEpochMs = System.currentTimeMillis())
             }
         }
 }
