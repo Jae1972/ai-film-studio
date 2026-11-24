@@ -27,28 +27,16 @@ class GeminiStudioService(
     suspend fun generateFullFilm(input: FilmProductionInput): Result<FilmProject> =
         withContext(Dispatchers.IO) {
             runCatching {
-                if (apiKey.isBlank() || apiKey.contains("TEMPEL_API_KEY")) {
-                    error("API Key Gemini belum diisi di MainActivity.kt.")
+                if (apiKey.isBlank()) {
+                    error("API Key Gemini kosong. Pastikan GEMINI_API_KEY sudah terpasang di GitHub Secrets.")
                 }
 
-                val characterSeedList = if (input.characters.isEmpty()) {
-                    "Buat 3-4 karakter utama yang kuat sesuai premis."
-                } else {
-                    input.characters.joinToString("\n") { "- ${it.name} (${it.role}): ${it.traits}" }
-                }
+                val inputJsonString = json.encodeToString(FilmProductionInput.serializer(), input)
 
                 val prompt = """
                     Anda adalah sutradara film profesional, showrunner, dan penulis skenario sinematik.
-                    Buat paket pra-produksi film lengkap dalam format JSON murni (tanpa markdown ```json) berdasarkan parameter berikut:
-                    - Judul Film: ${input.title}
-                    - Premis Utama: ${input.premise}
-                    - Genre: ${input.genre}
-                    - Bahasa Dialog & Naskah: ${input.language}
-                    - Gaya Visual: ${input.visualStyle}
-                    - Rasio Aspek: ${input.aspectRatio}
-                    - Target Durasi: ${input.targetDuration}
-                    - Detail Karakter Awal:
-                    $characterSeedList
+                    Buat paket pra-produksi film lengkap dalam format JSON murni (tanpa markdown ```json) berdasarkan data input berikut:
+                    $inputJsonString
 
                     Kembalikan objek JSON yang mengikuti struktur persis ini:
                     {
