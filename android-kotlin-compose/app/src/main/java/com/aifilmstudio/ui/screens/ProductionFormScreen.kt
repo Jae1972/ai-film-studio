@@ -80,7 +80,6 @@ fun ProductionFormScreen(
         "Hyper-Realistic Drama"
     )
 
-    // State Form Input Karakter
     var charName by remember { mutableStateOf("") }
     var charRole by remember { mutableStateOf("Protagonis") }
     var charAge by remember { mutableStateOf("") }
@@ -131,7 +130,6 @@ fun ProductionFormScreen(
             }
         }
 
-        // PANEL UTAMA: INPUT PROYEK
         Surface(
             color = NavySurface,
             shape = RoundedCornerShape(12.dp),
@@ -149,7 +147,6 @@ fun ProductionFormScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Judul
                 StudioTextField(
                     label = "Judul",
                     value = input.title,
@@ -157,7 +154,6 @@ fun ProductionFormScreen(
                     onValueChange = { onInputChange(input.copy(title = it)) }
                 )
 
-                // Kategori Cerita & Kategori Custom
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -187,7 +183,6 @@ fun ProductionFormScreen(
                     }
                 }
 
-                // Genre & Bahasa Dialog
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -210,7 +205,6 @@ fun ProductionFormScreen(
                     }
                 }
 
-                // Jumlah Episode & Durasi per Episode
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -246,7 +240,6 @@ fun ProductionFormScreen(
                     }
                 }
 
-                // Rasio & Rasio Custom
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -276,7 +269,6 @@ fun ProductionFormScreen(
                     }
                 }
 
-                // Gaya Visual
                 StudioDropdownField(
                     label = "Gaya visual",
                     selected = input.visualStyle,
@@ -284,7 +276,6 @@ fun ProductionFormScreen(
                     onSelect = { onInputChange(input.copy(visualStyle = it)) }
                 )
 
-                // Ide Cerita
                 StudioTextField(
                     label = "Ide cerita",
                     value = input.premise,
@@ -294,7 +285,6 @@ fun ProductionFormScreen(
                     onValueChange = { onInputChange(input.copy(premise = it)) }
                 )
 
-                // PANEL DATA KARAKTER & FOTO REFERENSI (MENGGANTIKAN PRODUCT PLACEMENT)
                 Surface(
                     color = NavyInputBg,
                     shape = RoundedCornerShape(10.dp),
@@ -319,7 +309,6 @@ fun ProductionFormScreen(
                             )
                         }
 
-                        // Pemilih Foto Referensi Karakter Baru
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -462,7 +451,6 @@ fun ProductionFormScreen(
                             Text("Tambah Karakter ke Daftar", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         }
 
-                        // Daftar Karakter yang Sudah Dimasukkan
                         if (characters.isNotEmpty()) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
@@ -540,7 +528,6 @@ fun ProductionFormScreen(
                     }
                 }
 
-                // TOMBOL GENERATE PRODUKSI
                 Button(
                     onClick = onGenerateFilm,
                     enabled = !isGenerating && input.title.isNotBlank() && input.premise.isNotBlank(),
@@ -651,79 +638,3 @@ private fun StudioTextField(
                 Text(
                     text = placeholder,
                     color = TextSecondary.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(8.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = NavyInputBg,
-                unfocusedContainerColor = NavyInputBg,
-                focusedBorderColor = CyanAccent,
-                unfocusedBorderColor = CyanBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                cursorColor = CyanAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun StudioDropdownField(
-    label: String,
-    selected: String,
-    options: List<String>,
-    onSelect: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            color = TextSecondary,
-            fontSize = 12.sp
-        )
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            OutlinedTextField(
-                value = selected,
-                onValueChange = {},
-                readOnly = true,
-                singleLine = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = NavyInputBg,
-                    unfocusedContainerColor = NavyInputBg,
-                    focusedBorderColor = CyanAccent,
-                    unfocusedBorderColor = CyanBorder,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                ),
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                containerColor = NavySurface
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(text = option, color = TextPrimary, fontSize = 13.sp) },
-                        onClick = {
-                            onSelect(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
