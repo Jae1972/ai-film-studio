@@ -1,10 +1,13 @@
 package com.aifilmstudio.ui.screens
 
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,20 +16,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aifilmstudio.model.FilmProductionInput
+import com.aifilmstudio.model.GeneratedCharacter
+import java.util.UUID
 
 private val NavySurface = Color(0xFF0F1A2E)
 private val NavyInputBg = Color(0xFF0A111F)
@@ -39,12 +49,17 @@ private val TextSecondary = Color(0xFF94A3B8)
 @Composable
 fun ProductionFormScreen(
     input: FilmProductionInput,
+    characters: List<GeneratedCharacter> = emptyList(),
     isGenerating: Boolean,
     errorMessage: String?,
     onInputChange: (FilmProductionInput) -> Unit,
+    onAddCharacter: (GeneratedCharacter) -> Unit = {},
+    onDeleteCharacter: (String) -> Unit = {},
+    onUpdateCharacterPhoto: (String, String?) -> Unit = { _, _ -> },
     onGenerateFilm: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     val categoryOptions = listOf(
         "Drama Keluarga",
@@ -65,15 +80,32 @@ fun ProductionFormScreen(
         "Hyper-Realistic Drama"
     )
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
-    ) { uris: List<Uri> ->
-        if (uris.isNotEmpty()) {
-            val combined = (input.sponsorProductImageUris + uris.map { it.toString() })
-                .distinct()
-                .take(5)
-            onInputChange(input.copy(sponsorProductImageUris = combined))
+    // State Form Input Karakter
+    var charName by remember { mutableStateOf("") }
+    var charRole by remember { mutableStateOf("Protagonis") }
+    var charAge by remember { mutableStateOf("") }
+    var charAppearance by remember { mutableStateOf("") }
+    var charCostume by remember { mutableStateOf("") }
+    var charPhotoUri by remember { mutableStateOf<String?>(null) }
+
+    var pendingPhotoTargetId by remember { mutableStateOf<String?>(null) }
+
+    val newCharPhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            charPhotoUri = uri.toString()
         }
+    }
+
+    val existingCharPhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        val targetId = pendingPhotoTargetId
+        if (uri != null && targetId != null) {
+            onUpdateCharacterPhoto(targetId, uri.toString())
+        }
+        pendingPhotoTargetId = null
     }
 
     Column(
@@ -121,7 +153,7 @@ fun ProductionFormScreen(
                 StudioTextField(
                     label = "Judul",
                     value = input.title,
-                    placeholder = "Contoh: Prahara Mataram",
+                    placeholder = "Contoh: Sasra Bahu Mbalela",
                     onValueChange = { onInputChange(input.copy(title = it)) }
                 )
 
@@ -262,7 +294,7 @@ fun ProductionFormScreen(
                     onValueChange = { onInputChange(input.copy(premise = it)) }
                 )
 
-                // PANEL SPONSOR / PRODUCT PLACEMENT (OPSIONAL)
+                // PANEL DATA KARAKTER & FOTO REFERENSI (MENGGANTIKAN PRODUCT PLACEMENT)
                 Surface(
                     color = NavyInputBg,
                     shape = RoundedCornerShape(10.dp),
@@ -275,145 +307,235 @@ fun ProductionFormScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "Sponsor / Product Placement (Opsional)",
+                                text = "Data Karakter & Foto Referensi",
                                 color = CyanAccent,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Sisipkan produk secara natural, maksimal 1–2 scene per episode.",
+                                text = "Tambahkan profil tokoh dan foto wajah agar konsisten di naskah & storyboard.",
                                 color = TextSecondary,
                                 fontSize = 11.sp
                             )
                         }
 
-                        StudioTextField(
-                            label = "Nama Produk / Merek",
-                            value = input.sponsorBrandName,
-                            placeholder = "Contoh: Skincare Serum X / Batik Lurik Nusantara",
-                            onValueChange = { onInputChange(input.copy(sponsorBrandName = it)) }
-                        )
-
-                        StudioTextField(
-                            label = "Manfaat / Kegunaan",
-                            value = input.sponsorBenefit,
-                            placeholder = "Contoh: Membantu melembapkan kulit / Busana khas ksatria",
-                            onValueChange = { onInputChange(input.copy(sponsorBenefit = it)) }
-                        )
-
-                        // Foto Produk (Maks. 5 Foto)
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Foto Produk (Maks. 5 Foto)",
-                                color = TextSecondary,
-                                fontSize = 12.sp
+                        // Pemilih Foto Referensi Karakter Baru
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NavySurface)
+                                .border(1.dp, CyanBorder, RoundedCornerShape(8.dp))
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            FormCharacterThumbnail(
+                                uriString = charPhotoUri,
+                                modifier = Modifier.size(64.dp)
                             )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        photoPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
-                                    },
-                                    enabled = input.sponsorProductImageUris.size < 5,
-                                    border = BorderStroke(1.dp, CyanAccent),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = CyanAccent
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AddPhotoAlternate,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Choose Files", fontSize = 12.sp)
-                                }
-
                                 Text(
-                                    text = if (input.sponsorProductImageUris.isEmpty()) {
-                                        "No file chosen"
-                                    } else {
-                                        "${input.sponsorProductImageUris.size} / 5 foto dipilih"
-                                    },
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
+                                    text = if (charPhotoUri != null) "Foto Wajah Dipilih" else "Foto Wajah Karakter (Opsional)",
+                                    color = if (charPhotoUri != null) CyanAccent else TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                            }
-
-                            if (input.sponsorProductImageUris.isNotEmpty()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    input.sponsorProductImageUris.forEachIndexed { idx, uriStr ->
-                                        Surface(
-                                            color = NavySurface,
-                                            shape = RoundedCornerShape(6.dp),
-                                            border = BorderStroke(1.dp, CyanBorder)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            newCharPhotoPicker.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        },
+                                        border = BorderStroke(1.dp, CyanAccent),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanAccent)
+                                    ) {
+                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(15.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(if (charPhotoUri != null) "Ganti Foto" else "Upload Foto", fontSize = 11.sp)
+                                    }
+                                    if (charPhotoUri != null) {
+                                        IconButton(
+                                            onClick = { charPhotoUri = null },
+                                            modifier = Modifier.size(30.dp)
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Foto ${idx + 1}",
-                                                    color = TextPrimary,
-                                                    fontSize = 11.sp
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                IconButton(
-                                                    onClick = {
-                                                        val updated = input.sponsorProductImageUris.filterNot { it == uriStr }
-                                                        onInputChange(input.copy(sponsorProductImageUris = updated))
-                                                    },
-                                                    modifier = Modifier.size(16.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Close,
-                                                        contentDescription = "Hapus foto",
-                                                        tint = TextSecondary,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                }
-                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Hapus foto",
+                                                tint = Color(0xFFF87171),
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // Checkbox Outfit Default Karakter Utama
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(NavySurface)
-                                .border(1.dp, CyanBorder, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Checkbox(
-                                checked = input.useSponsorAsDefaultOutfit,
-                                onCheckedChange = {
-                                    onInputChange(input.copy(useSponsorAsDefaultOutfit = it))
-                                },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = CyanAccent,
-                                    uncheckedColor = TextSecondary,
-                                    checkmarkColor = NavyInputBg
+                            Box(modifier = Modifier.weight(1.4f)) {
+                                StudioTextField(
+                                    label = "Nama Karakter",
+                                    value = charName,
+                                    placeholder = "Contoh: Ki Ageng Sabdo",
+                                    onValueChange = { charName = it }
                                 )
-                            )
-                            Text(
-                                text = "Jadikan produk sebagai outfit default karakter utama (khusus sponsor fashion)",
-                                color = TextPrimary,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp
-                            )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                StudioTextField(
+                                    label = "Peran",
+                                    value = charRole,
+                                    placeholder = "Protagonis",
+                                    onValueChange = { charRole = it }
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(0.7f)) {
+                                StudioTextField(
+                                    label = "Usia",
+                                    value = charAge,
+                                    placeholder = "35 thn",
+                                    onValueChange = { charAge = it }
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1.3f)) {
+                                StudioTextField(
+                                    label = "Kostum / Atribut",
+                                    value = charCostume,
+                                    placeholder = "Surjan lurik, blangkon, keris",
+                                    onValueChange = { charCostume = it }
+                                )
+                            }
+                        }
+
+                        StudioTextField(
+                            label = "Ciri Fisik & Wajah",
+                            value = charAppearance,
+                            placeholder = "Tubuh tegap, rahang tegas, tatapan tajam...",
+                            onValueChange = { charAppearance = it }
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                val created = GeneratedCharacter(
+                                    id = "char_${UUID.randomUUID().toString().take(6)}",
+                                    name = charName.trim(),
+                                    role = charRole.ifBlank { "Protagonis" }.trim(),
+                                    age = charAge.trim(),
+                                    appearance = charAppearance.trim(),
+                                    facialDescription = charAppearance.trim(),
+                                    costume = charCostume.trim(),
+                                    referenceImageUri = charPhotoUri
+                                )
+                                onAddCharacter(created)
+                                charName = ""
+                                charAge = ""
+                                charAppearance = ""
+                                charCostume = ""
+                                charPhotoUri = null
+                                Toast.makeText(context, "Karakter ditambahkan!", Toast.LENGTH_SHORT).show()
+                            },
+                            enabled = charName.isNotBlank(),
+                            border = BorderStroke(1.dp, if (charName.isNotBlank()) CyanAccent else CyanBorder),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = CyanAccent,
+                                disabledContentColor = TextSecondary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Tambah Karakter ke Daftar", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        }
+
+                        // Daftar Karakter yang Sudah Dimasukkan
+                        if (characters.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Karakter Terdaftar (${characters.size})",
+                                    color = TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                characters.forEach { item ->
+                                    Surface(
+                                        color = NavySurface,
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, CyanBorder),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            FormCharacterThumbnail(
+                                                uriString = item.referenceImageUri,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "${item.name} (${item.role})",
+                                                    color = CyanAccent,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                if (item.costume.isNotBlank() || item.appearance.isNotBlank()) {
+                                                    Text(
+                                                        text = listOf(item.appearance, item.costume)
+                                                            .filter { it.isNotBlank() }
+                                                            .joinToString(" • "),
+                                                        color = TextSecondary,
+                                                        fontSize = 11.sp,
+                                                        maxLines = 2
+                                                    )
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    pendingPhotoTargetId = item.id
+                                                    existingCharPhotoPicker.launch(
+                                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                    )
+                                                },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                                    contentDescription = "Ubah foto",
+                                                    tint = CyanAccent,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = { onDeleteCharacter(item.id) },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = "Hapus karakter",
+                                                    tint = Color(0xFFF87171),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -457,6 +579,50 @@ fun ProductionFormScreen(
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun FormCharacterThumbnail(
+    uriString: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val bitmap: ImageBitmap? = remember(uriString) {
+        if (uriString.isNullOrBlank()) {
+            null
+        } else {
+            runCatching {
+                val uri = Uri.parse(uriString)
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            }.getOrNull()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(NavyInputBg)
+            .border(1.dp, if (bitmap != null) CyanAccent else CyanBorder, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Foto Karakter",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 
